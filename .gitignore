@@ -1,0 +1,23 @@
+# Target / Build Output
+target/
+*.class
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# IDE & Editor Files
+.idea/
+*.iml
+.vscode/
+*.swp
+.DS_Store
+
+# Frontend Node Modules & Build
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Logs
+*.log
