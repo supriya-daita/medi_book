@@ -17,13 +17,15 @@ try:
     import tree_sitter_javascript
     LANG_MAP[".js"] = ("javascript", tree_sitter_javascript)
     LANG_MAP[".jsx"] = ("javascript", tree_sitter_javascript)
-except ImportError: pass
+except ImportError as e:
+    print(f"Warning: tree_sitter_javascript not found: {e}")
 
 try:
     import tree_sitter_typescript
     LANG_MAP[".ts"] = ("typescript", tree_sitter_typescript)
     LANG_MAP[".tsx"] = ("tsx", tree_sitter_typescript)
-except ImportError: pass
+except ImportError as e:
+    print(f"Warning: tree_sitter_typescript not found: {e}")
 
 try:
     import tree_sitter_java
@@ -156,6 +158,25 @@ def process_python(tree, source_bytes, rel_path, all_nodes, all_edges):
 def process_js_ts(tree, source_bytes, rel_path, all_nodes, all_edges):
     file_id = f"file://{rel_path}"
     
+    # Treat JSX/TSX files as UI Components
+    if rel_path.endswith('.jsx') or rel_path.endswith('.tsx'):
+        component_name = Path(rel_path).stem
+        class_id = f"class://{rel_path}/{component_name}"
+        all_nodes.append({
+            "id": class_id,
+            "type": "CLASS",
+            "name": component_name,
+            "file": rel_path,
+            "is_ui_component": True,
+            "line_start": 1,
+            "line_end": max(1, len(source_bytes.splitlines())),
+            "body": source_bytes.decode('utf8', 'ignore')
+        })
+        all_edges.append({"source": file_id, "target": class_id, "type": "DEFINES"})
+        base_context_id = class_id
+    else:
+        base_context_id = None
+        
     def traverse(node, current_context_id=None):
         if node.type in ('function_declaration', 'method_definition', 'arrow_function'):
             name_node = node.child_by_field_name('name')
@@ -175,6 +196,7 @@ def process_js_ts(tree, source_bytes, rel_path, all_nodes, all_edges):
                     "type": "FUNCTION",
                     "name": func_name,
                     "file": rel_path,
+                    "class_name": component_name if current_context_id else "",
                     "parameters": params,
                     "docstring": "",
                     "decorators": [],
@@ -203,7 +225,7 @@ def process_js_ts(tree, source_bytes, rel_path, all_nodes, all_edges):
         for child in node.children:
             traverse(child, current_context_id)
             
-    traverse(tree.root_node)
+    traverse(tree.root_node, current_context_id=base_context_id)
 
 def process_java(tree, source_bytes, rel_path, all_nodes, all_edges):
     file_id = f"file://{rel_path}"
