@@ -178,7 +178,7 @@ def process_js_ts(tree, source_bytes, rel_path, all_nodes, all_edges):
                     is_ui = True
                     c_name = func_name
                     
-                all_nodes.append({
+                node_data = {
                     "id": func_id,
                     "type": "FUNCTION",
                     "name": func_name,
@@ -190,8 +190,10 @@ def process_js_ts(tree, source_bytes, rel_path, all_nodes, all_edges):
                     "decorators": [],
                     "line_start": node.start_point[0] + 1,
                     "line_end": node.end_point[0] + 1,
-                    "body": extract_node_text(node, source_bytes)
-                })
+                }
+                if not is_ui:
+                    node_data["body"] = extract_node_text(node, source_bytes)
+                all_nodes.append(node_data)
                 all_edges.append({"source": file_id, "target": func_id, "type": "DEFINES"})
                 
                 body_node = node.child_by_field_name('body')
